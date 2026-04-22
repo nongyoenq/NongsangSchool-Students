@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>Student Viewer - Ban Nong Saeng School</title>
+  <title>Excel Viewer - Ban Nong Saeng School</title>
   <!-- โหลด Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- โหลด Google Font Sarabun -->
@@ -14,8 +14,9 @@
 <body class="bg-[#f8f4f1] dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col">
 
   <!-- Header -->
-  <header class="p-4 bg-gradient-to-r from-red-500 to-yellow-400 text-white text-center">
+  <header class="p-4 bg-gradient-to-r from-red-500 to-yellow-400 text-white text-center flex justify-between items-center">
     <h1 class="text-2xl font-bold">📊 ระบบดูข้อมูล Excel</h1>
+    <div class="rounded-full bg-white text-black px-3 py-1">👤</div>
   </header>
 
   <!-- ส่วนค้นหา -->
@@ -41,14 +42,13 @@
   <button onclick="toggleDarkMode()" 
     class="fixed top-5 right-5 px-3 py-2 bg-gray-800 text-white rounded">🌗</button>
 
-  <!-- Script -->
+  <!-- โหลด XLSX.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script>
-    // 📌 ฟังก์ชันโหลดไฟล์ Excel จาก OneDrive
+    // 📌 ฟังก์ชันโหลดไฟล์ Excel จาก local (data.xlsx)
     async function loadExcel() {
       try {
-        const url = 'https://onedrive.live.com/download?cid=35CE87AE60EAE137&resid=35CE87AE60EAE137%21352&authkey=IQA34epgrofOIIA1NQEAAAAAAYbdjLpjXVU69CxG6JsrBRo';
-		const response = await fetch(url);
+        const response = await fetch('./data.xlsx'); // โหลดไฟล์จากโฟลเดอร์เดียวกัน
         const arrayBuffer = await response.arrayBuffer();
         const workbook = XLSX.read(arrayBuffer, { type: 'array' });
 
