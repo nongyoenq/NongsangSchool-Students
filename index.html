@@ -1,130 +1,385 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <title>Excel Viewer - Ban Nong Saeng School</title>
-  <!-- โหลด Tailwind CSS -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Excel Viewer - Modern Sidebar</title>
+
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- โหลด Google Font Sarabun -->
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun&display=swap" rel="stylesheet">
+
+  <!-- Google Font Sarabun -->
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome (icons) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
   <style>
     body { font-family: 'Sarabun', sans-serif; }
+    /* กำหนด gradient โทนเขียวอ่อน -> เขียวเข้ม สำหรับ header และ sidebar */
+    :root{
+      --grad-start: #185C37; /* เขียวอ่อน */
+      --grad-mid: #10793F;   /* เขียวกลาง */
+      --grad-end: #21A366;   /* เขียวเข้ม */
+	  --grad-end: #33C481;
+    }
+    .header-gradient {
+      background: linear-gradient(90deg, var(--grad-start), var(--grad-mid), var(--grad-end));
+    }
+    .sidebar-gradient {
+      background: linear-gradient(180deg, var(--grad-start), var(--grad-mid), var(--grad-end));
+    }
+    /* transition สำหรับการยุบ/ขยาย sidebar */
+    .sidebar-transition { transition: width .25s ease, min-width .25s ease; }
+    /* ซ่อน label เมื่อ sidebar ยุบ */
+    .sidebar-collapsed .menu-label { display: none; }
+    .sidebar-collapsed .menu-icon { margin-right: 0; }
+    /* ปรับขนาดไอคอนเมื่อยุบ */
+    .sidebar-collapsed .menu-icon i { font-size: 1.15rem; }
+    /* ปรับความกว้างเมื่อยุบ */
+    .sidebar-collapsed { width: 72px !important; min-width: 72px !important; }
+    /* ปรับ table header sticky */
+    thead th { position: sticky; top: 0; z-index: 10; }
   </style>
 </head>
-<body class="bg-[#f8f4f1] dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col">
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
 
-  <!-- Header -->
-  <header class="p-4 bg-gradient-to-r from-red-500 to-yellow-400 text-white text-center flex justify-between items-center">
-    <h1 class="text-2xl font-bold">📊 ระบบดูข้อมูล Excel</h1>
-    <div class="rounded-full bg-white text-black px-3 py-1">👤</div>
-  </header>
+  <div class="flex h-screen">
 
-  <!-- ส่วนค้นหา -->
-  <section class="p-4">
-    <input id="searchInput" type="text" placeholder="🔍 ค้นหาข้อมูล..." 
-      class="w-full p-2 border rounded focus:outline-none focus:ring focus:border-blue-300">
-  </section>
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar-gradient text-white w-64 min-w-[16rem] sidebar-transition flex flex-col shadow-lg">
+      <!-- Sidebar header with collapse button -->
+      <div class="flex items-center justify-between px-4 py-4 border-b border-white/20">
+        <div class="flex items-center gap-3">
+          <div class="bg-white/20 rounded-md p-2">
+            <i class="fa-solid fa-file-excel fa-lg"></i>
+          </div>
+          <div class="text-lg font-semibold menu-label">เมนูไฟล์</div>
+        </div>
+        <!-- ปุ่มยุบ/ขยาย -->
+        <button id="btnToggleSidebar" class="bg-white/20 hover:bg-white/30 p-2 rounded-md">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+      </div>
 
-  <!-- ตารางแสดงข้อมูล -->
-  <section class="p-4 overflow-x-auto">
-    <table id="dataTable" class="min-w-full border-collapse border border-gray-300">
-      <thead class="bg-gray-200 dark:bg-gray-700">
-        <tr id="tableHeader"></tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
-  </section>
+      <!-- Sidebar content -->
+      <nav class="flex-1 px-3 py-4 space-y-2">
+        <!-- ปุ่มเปิดไฟล์ local (data.xlsx) -->
+        <button onclick="loadExcel()" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition">
+          <span class="menu-icon text-xl"><i class="fa-solid fa-folder-open"></i></span>
+          <span class="menu-label">เปิดไฟล์ (data.xlsx)</span>
+        </button>
 
-  <!-- Toast Notification -->
-  <div id="toast" class="fixed bottom-5 right-5 hidden px-4 py-2 rounded shadow-lg bg-green-500 text-white"></div>
+        <!-- ปุ่มอัปโหลดไฟล์จากเครื่องผู้ใช้ -->
+        <label for="fileInput" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition cursor-pointer">
+          <span class="menu-icon text-xl"><i class="fa-solid fa-upload"></i></span>
+          <span class="menu-label">อัปโหลดไฟล์</span>
+        </label>
+        <input id="fileInput" type="file" accept=".xlsx,.xls" class="hidden" />
 
-  <!-- ปุ่มสลับ Dark/Light Mode -->
-  <button onclick="toggleDarkMode()" 
-    class="fixed top-5 right-5 px-3 py-2 bg-gray-800 text-white rounded">🌗</button>
+        <!-- Export CSV -->
+        <button id="btnExport" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition">
+          <span class="menu-icon text-xl"><i class="fa-solid fa-file-csv"></i></span>
+          <span class="menu-label">Export CSV</span>
+        </button>
 
-  <!-- โหลด XLSX.js -->
+        <!-- Settings -->
+        <button class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 transition">
+          <span class="menu-icon text-xl"><i class="fa-solid fa-gear"></i></span>
+          <span class="menu-label">ตั้งค่า</span>
+        </button>
+      </nav>
+
+      <!-- Footer -->
+      <div class="px-4 py-3 border-t border-white/20 text-sm flex items-center gap-3">
+        <span class="menu-icon text-lg"><i class="fa-solid fa-school"></i></span>
+        <span class="menu-label">Ban Nong Saeng School</span>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 flex flex-col">
+      <!-- Header -->
+      <header class="header-gradient text-white p-4 shadow-md flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <button id="btnSidebarMobile" class="md:hidden bg-white/20 p-2 rounded-md">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="text-2xl font-semibold flex items-center gap-3">
+            <i class="fa-solid fa-chart-column"></i>
+            <span>ระบบดูข้อมูล นักเรียน DMC ปีการศึกษา 2568 - โรงเรียนบ้านหนองแสง</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <!-- Dark/Light toggle -->
+          <button id="btnTheme" class="bg-white/20 hover:bg-white/30 p-2 rounded-md">
+            <i class="fa-solid fa-circle-half-stroke"></i>
+          </button>
+          <!-- User -->
+          <div class="bg-white text-green-800 px-3 py-1 rounded-full shadow-sm hidden sm:flex items-center gap-2">
+            <i class="fa-solid fa-user"></i>
+            <span class="text-sm">ผู้ใช้</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Controls -->
+      <section class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="col-span-2">
+            <div class="relative">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400"></i>
+              <input id="searchInput" type="text" placeholder="ค้นหาข้อมูล..." class="w-full pl-10 p-3 rounded-lg border focus:ring-2 focus:ring-green-400" />
+            </div>
+          </div>
+          <div class="flex items-center gap-3 justify-end">
+            <button id="btnReload" onclick="loadExcel()" class="px-4 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition">
+              <i class="fa-solid fa-rotate"></i> โหลดใหม่
+            </button>
+            <button id="btnClear" class="px-4 py-2 bg-white border rounded-lg shadow hover:bg-gray-50 transition">
+              ล้าง
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Table area -->
+      <section class="p-6 flex-1 overflow-auto">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <div class="overflow-x-auto">
+            <table id="dataTable" class="min-w-full table-auto">
+              <thead id="tableHeader" class="bg-green-100 dark:bg-gray-700"></thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 hidden px-4 py-2 rounded-lg shadow-lg bg-green-600 text-white"></div>
+
+  <!-- XLSX.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
   <script>
-    // 📌 ฟังก์ชันโหลดไฟล์ Excel จาก local (data.xlsx)
-    async function loadExcel() {
+    // ===========================
+    //  คอมเมนต์ภาษาไทยอธิบายโค้ด
+    //  - รองรับการโหลดไฟล์ local (data.xlsx)
+    //  - รองรับการอัปโหลดไฟล์จากเครื่องผู้ใช้ (file input)
+    //  - Sidebar ยุบ/ขยายได้ทั้ง desktop และ mobile
+    // ===========================
+
+    const sidebar = document.getElementById('sidebar');
+    const btnToggleSidebar = document.getElementById('btnToggleSidebar');
+    const btnSidebarMobile = document.getElementById('btnSidebarMobile');
+    const fileInput = document.getElementById('fileInput');
+    const searchInput = document.getElementById('searchInput');
+    const tableHeader = document.getElementById('tableHeader');
+    const tableBody = document.getElementById('tableBody');
+    const toast = document.getElementById('toast');
+    let currentData = []; // เก็บข้อมูล JSON ปัจจุบันสำหรับการค้นหา/เรียง
+
+    // ---------- Sidebar ยุบ/ขยาย (desktop) ----------
+    btnToggleSidebar.addEventListener('click', () => {
+      const collapsed = sidebar.classList.toggle('sidebar-collapsed');
+      // เปลี่ยน icon ลูกศร
+      const icon = btnToggleSidebar.querySelector('i');
+      icon.classList.toggle('fa-chevron-left', !collapsed);
+      icon.classList.toggle('fa-chevron-right', collapsed);
+    });
+
+    // ---------- Sidebar toggle สำหรับ mobile ----------
+    btnSidebarMobile.addEventListener('click', () => {
+      // บน mobile ให้ toggle class hidden
+      sidebar.classList.toggle('hidden');
+    });
+
+    // ---------- Theme toggle (dark/light) ----------
+    document.getElementById('btnTheme').addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+      showToast('เปลี่ยนโหมดสำเร็จ');
+    });
+
+    // ---------- โหลดไฟล์ Excel จาก local data.xlsx ----------
+    async function loadExcelFromUrl(urlArrayBuffer) {
       try {
-        const response = await fetch('./data.xlsx'); // โหลดไฟล์จากโฟลเดอร์เดียวกัน
-        const arrayBuffer = await response.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-
-        // 📌 เลือก worksheet 'Sheet1'
-        const sheet = workbook.Sheets['Sheet1'];
-        const jsonData = XLSX.utils.sheet_to_json(sheet);
-
+        const workbook = XLSX.read(urlArrayBuffer, { type: 'array' });
+        const sheet = workbook.Sheets['Sheet1'] || workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        currentData = jsonData;
         renderTable(jsonData);
-        showToast("✅ โหลดข้อมูลสำเร็จ");
-      } catch (error) {
-        showToast("❌ เกิดข้อผิดพลาดในการโหลดไฟล์");
-        console.error(error);
+        showToast('✅ โหลดข้อมูลสำเร็จ');
+      } catch (err) {
+        console.error(err);
+        showToast('❌ เกิดข้อผิดพลาดในการอ่านไฟล์');
       }
     }
 
-    // 📌 ฟังก์ชันแสดงข้อมูลในตาราง
+    // โหลดไฟล์ data.xlsx ในโฟลเดอร์เดียวกัน
+    async function loadExcel() {
+      try {
+        const resp = await fetch('./data.xlsx');
+        if (!resp.ok) throw new Error('ไม่สามารถดาวน์โหลดไฟล์ data.xlsx ได้');
+        const arrayBuffer = await resp.arrayBuffer();
+        await loadExcelFromUrl(arrayBuffer);
+      } catch (err) {
+        console.error(err);
+        showToast('❌ โหลดไฟล์ local ล้มเหลว (ตรวจสอบ data.xlsx และ server)');
+      }
+    }
+
+    // ---------- อัปโหลดไฟล์จากเครื่องผู้ใช้ ----------
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        await loadExcelFromUrl(arrayBuffer);
+      } catch (err) {
+        console.error(err);
+        showToast('❌ อ่านไฟล์ที่อัปโหลดล้มเหลว');
+      }
+    });
+
+    // ---------- แสดงตาราง (render) ----------
     function renderTable(data) {
-      const headerRow = document.getElementById('tableHeader');
-      const body = document.getElementById('tableBody');
-      headerRow.innerHTML = '';
-      body.innerHTML = '';
+      tableHeader.innerHTML = '';
+      tableBody.innerHTML = '';
 
-      if (data.length === 0) return;
+      if (!data || data.length === 0) {
+        tableBody.innerHTML = '<tr><td class="p-4 text-center text-gray-500" colspan="20">ไม่มีข้อมูล</td></tr>';
+        return;
+      }
 
-      // สร้างหัวตาราง
-      Object.keys(data[0]).forEach(key => {
+      // สร้างหัวตารางจากคีย์ของ object แถวแรก
+      const keys = Object.keys(data[0]);
+      const trHead = document.createElement('tr');
+      keys.forEach(key => {
         const th = document.createElement('th');
         th.textContent = key;
-        th.className = "border px-4 py-2 cursor-pointer hover:bg-yellow-200";
-        th.onclick = () => sortTable(key, data);
-        headerRow.appendChild(th);
+        th.className = 'px-4 py-3 text-left text-sm font-medium';
+        // คลิกหัวตารางเพื่อเรียงข้อมูล
+        th.style.cursor = 'pointer';
+        th.addEventListener('click', () => {
+          sortTableByKey(key);
+        });
+        trHead.appendChild(th);
       });
+      tableHeader.appendChild(trHead);
 
       // สร้างแถวข้อมูล
       data.forEach(row => {
         const tr = document.createElement('tr');
-        Object.values(row).forEach(val => {
+        tr.className = 'hover:bg-green-50 dark:hover:bg-gray-700 transition';
+        keys.forEach(k => {
           const td = document.createElement('td');
-          td.textContent = val;
-          td.className = "border px-4 py-2";
+          td.textContent = row[k];
+          td.className = 'px-4 py-2 border-b text-sm';
           tr.appendChild(td);
         });
-        body.appendChild(tr);
-      });
-
-      // ฟังก์ชันค้นหา
-      document.getElementById('searchInput').addEventListener('input', e => {
-        const keyword = e.target.value.toLowerCase();
-        const filtered = data.filter(row => 
-          Object.values(row).some(val => String(val).toLowerCase().includes(keyword))
-        );
-        renderTable(filtered);
+        tableBody.appendChild(tr);
       });
     }
 
-    // 📌 ฟังก์ชันเรียงข้อมูล
-    function sortTable(key, data) {
-      const sorted = [...data].sort((a, b) => (a[key] > b[key] ? 1 : -1));
-      renderTable(sorted);
+    // ---------- ค้นหา (filter) ----------
+    searchInput.addEventListener('input', (e) => {
+      const q = e.target.value.trim().toLowerCase();
+      if (!q) {
+        renderTable(currentData);
+        return;
+      }
+      const filtered = currentData.filter(row =>
+        Object.values(row).some(v => String(v).toLowerCase().includes(q))
+      );
+      renderTable(filtered);
+    });
+
+    // ---------- เรียงข้อมูล (sort) ----------
+    let lastSort = { key: null, asc: true };
+    function sortTableByKey(key) {
+      const data = [...currentData];
+      // ตรวจสอบชนิดข้อมูลเพื่อเรียงตัวเลขก่อน (พยายามแปลงเป็น number)
+      data.sort((a, b) => {
+        const va = a[key];
+        const vb = b[key];
+        const na = parseFloat(va);
+        const nb = parseFloat(vb);
+        if (!isNaN(na) && !isNaN(nb)) {
+          return lastSort.key === key && lastSort.asc ? nb - na : na - nb;
+        }
+        // string compare
+        if (String(va).toLowerCase() < String(vb).toLowerCase()) return lastSort.key === key && lastSort.asc ? 1 : -1;
+        if (String(va).toLowerCase() > String(vb).toLowerCase()) return lastSort.key === key && lastSort.asc ? -1 : 1;
+        return 0;
+      });
+      // toggle sort direction
+      if (lastSort.key === key) lastSort.asc = !lastSort.asc;
+      else { lastSort.key = key; lastSort.asc = true; }
+      renderTable(data);
     }
 
-    // 📌 Toast Notification
-    function showToast(message) {
-      const toast = document.getElementById('toast');
-      toast.textContent = message;
+    // ---------- Export CSV (simple) ----------
+    document.getElementById('btnExport').addEventListener('click', () => {
+      if (!currentData || currentData.length === 0) {
+        showToast('ไม่มีข้อมูลให้ Export');
+        return;
+      }
+      // สร้าง CSV จาก currentData
+      const keys = Object.keys(currentData[0]);
+      const rows = [keys.join(',')];
+      currentData.forEach(r => {
+        const line = keys.map(k => {
+          const cell = String(r[k] ?? '').replace(/"/g, '""');
+          return `"${cell}"`;
+        }).join(',');
+        rows.push(line);
+      });
+      const csv = rows.join('\n');
+      // ดาวน์โหลดไฟล์ CSV
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'export.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showToast('✅ Export CSV สำเร็จ');
+    });
+
+    // ---------- Toast notification ----------
+    let toastTimer = null;
+    function showToast(msg, ms = 3000) {
+      clearTimeout(toastTimer);
+      toast.textContent = msg;
       toast.classList.remove('hidden');
-      setTimeout(() => toast.classList.add('hidden'), 3000);
+      toast.classList.add('opacity-100');
+      toastTimer = setTimeout(() => {
+        toast.classList.add('hidden');
+      }, ms);
     }
 
-    // 📌 Toggle Dark/Light Mode
-    function toggleDarkMode() {
-      document.body.classList.toggle('dark');
-    }
+    // ---------- ปุ่มล้าง ----------
+    document.getElementById('btnClear').addEventListener('click', () => {
+      searchInput.value = '';
+      renderTable(currentData);
+      showToast('ล้างตัวกรองแล้ว');
+    });
 
-    // 📌 เริ่มโหลดข้อมูลเมื่อเปิดหน้า
-    loadExcel();
+    // ---------- เริ่มต้น: โหลดไฟล์ data.xlsx (ถ้ามี) ----------
+    // เรียกเมื่อหน้าโหลดเสร็จ
+    window.addEventListener('load', () => {
+      loadExcel();
+    });
+
+    // ---------- Responsive: ซ่อน sidebar บน mobile เริ่มต้น ----------
+    // (ถ้าต้องการให้ซ่อนโดย default บนหน้าจอเล็ก ให้ uncomment ข้างล่าง)
+    // if (window.innerWidth < 768) sidebar.classList.add('hidden');
+
   </script>
 </body>
 </html>
