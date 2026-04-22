@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการข้อมูลนักเรียน DMC - โรงเรียนบ้านหนองแสง ปีการศึกษา 2568</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Font Sarabun (ภาษาไทย) -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- SheetJS สำหรับอ่านไฟล์ Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        /* ตั้งค่า font Sarabun เป็นฟอนต์หลัก */
+        * {
+            font-family: 'Sarabun', sans-serif;
+        }
+        
+        /* ตัวแปร CSS สำหรับสีธีม */
+        :root {
+            --excel-green-600: #107C10;
+            --excel-green-500: #00B050;
+            --excel-green-400: #70AD47;
+            --excel-green-300: #A9D08E;
+            --excel-green-200: #D5E8D4;
+            --excel-green-100: #EBF5E3;
+        }
+        
+        /* Dark mode colors */
+        .dark {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+        }
+        
+        /* Light mode colors */
+        body {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text-primary: #000000;
+            --text-secondary: #666666;
+        }
+        
+        /* Smooth transitions */
+        body, .navbar, .sidebar, .content-area {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        /* Glass-morphism effect */
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .dark .glass {
+            background: rgba(16, 124, 16, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 176, 80, 0.3);
+        }
+        
+        /* Gradient background */
+        .gradient-excel {
+            background: linear-gradient(135deg, #107C10 0%, #00B050 50%, #70AD47 100%);
+        }
+        
+        .dark .gradient-excel {
+            background: linear-gradient(135deg, #0d5a0b 0%, #007a3a 50%, #3d6b28 100%);
+        }
+        
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            animation: slideIn 0.3s ease;
+            z-index: 1000;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+        
+        .toast.hide {
+            animation: slideOut 0.3s ease;
+        }
+        
+        .toast.success {
+            background-color: #10b981;
+            color: white;
+        }
+        
+        .toast.error {
+            background-color: #ef4444;
+            color: white;
+        }
+        
+        .dark .toast {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Table styling */
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table thead {
+            background: linear-gradient(90deg, #107C10, #00B050);
+            color: white;
+        }
+        
+        .dark .data-table thead {
+            background: linear-gradient(90deg, #0d5a0b, #007a3a);
+        }
+        
+        .data-table th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid var(--excel-green-500);
+        }
+        
+        .data-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        
+        .dark .data-table td {
+            border-bottom: 1px solid #444;
+        }
+        
+        .data-table tbody tr {
+            transition: background-color 0.2s ease;
+        }
+        
+        .data-table tbody tr:hover {
+            background-color: var(--excel-green-100);
+        }
+        
+        .dark .data-table tbody tr:hover {
+            background-color: rgba(0, 176, 80, 0.1);
+        }
+        
+        .data-table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .dark .data-table tbody tr:nth-child(even) {
+            background-color: #2a2a2a;
+        }
+        
+        /* Input styling */
+        input, select {
+            transition: all 0.3s ease;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            ring: 2px solid var(--excel-green-500);
+            border-color: var(--excel-green-500);
+        }
+        
+        /* Button hover effects */
+        button {
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 124, 16, 0.3);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        /* Header badge */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background-color: var(--excel-green-100);
+            color: var(--excel-green-600);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .dark .badge {
+            background-color: rgba(0, 176, 80, 0.2);
+            color: #70AD47;
+        }
+        
+        /* Stats card */
+        .stats-card {
+            background: linear-gradient(135deg, var(--excel-green-500) 0%, var(--excel-green-400) 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(16, 124, 16, 0.2);
+        }
+        
+        .dark .stats-card {
+            box-shadow: 0 4px 12px rgba(0, 176, 80, 0.2);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .desktop-only {
+                display: none;
+            }
+            
+            .mobile-only {
+                display: block;
+            }
+        }
+        
+        .mobile-only {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Dark mode toggle -->
+    <script>
+        // เริ่มต้น dark mode จากการตั้งค่า localStorage
+        if (localStorage.getItem('darkMode') === 'true' || 
+            (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+    
+    <!-- Navbar -->
+    <nav class="navbar gradient-excel text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo และ Title -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center font-bold text-green-700">
+                        📊
+                    </div>
+                    <div class="hidden sm:block">
+                        <h1 class="font-bold text-lg">ระบบจัดการข้อมูล</h1>
+                        <p class="text-xs opacity-90">โรงเรียนบ้านหนองแสง 2568</p>
+                    </div>
+                </div>
+                
+                <!-- Dark Mode Toggle -->
+                <button id="darkModeToggle" class="p-2 rounded-lg bg-white bg-opacity-20 hover:bg-opacity-30 transition">
+                    <span id="themeIcon" class="text-xl">🌙</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Container -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header Section -->
+        <div class="mb-8">
+            <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                ✏️ จัดการข้อมูลนักเรียน
+            </h2>
+            <p class="text-gray-600 dark:text-gray-400">อัปโหลดไฟล์ Excel และค้นหา/จัดรูปแบบข้อมูลนักเรียนได้อย่างง่าย</p>
+        </div>
+        
+        <!-- Upload Section -->
+        <div class="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 mb-6 border-2 border-green-200 dark:border-green-900">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <!-- File Input -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        📁 เลือกไฟล์ Excel
+                    </label>
+                    <input 
+                        type="file" 
+                        id="excelFile" 
+                        accept=".xlsx,.xls,.csv"
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-800 dark:text-white"
+                    >
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">รองรับ: .xlsx, .xls, .csv</p>
+                </div>
+                
+                <!-- Upload Button -->
+                <div>
+                    <button 
+                        id="uploadBtn" 
+                        class="btn-primary w-full bg-gradient-to-r from-green-600 to-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:shadow-lg active:scale-95 transition flex items-center justify-center space-x-2"
+                    >
+                        <span>📤</span>
+                        <span>อัปโหลด</span>
+                    </button>
+                </div>
+                
+                <!-- Stats Badge -->
+                <div class="md:text-right">
+                    <div class="stats-card">
+                        <p class="text-sm opacity-90">จำนวนสถิติ</p>
+                        <p class="text-2xl font-bold" id="recordCount">0 รายการ</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Search and Filter Section -->
+        <div class="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">🔍 ค้นหาและจัดรูปแบบ</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <!-- Search Input -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        ค้นหาข้อมูล
+                    </label>
+                    <input 
+                        type="text"
+                        id="searchInput"
+                        placeholder="พิมพ์ชื่อ, รหัส หรือข้อมูลอื่น..."
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-800 dark:text-white"
+                    >
+                </div>
+                
+                <!-- Sort Column -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        เรียงลำดับตาม
+                    </label>
+                    <select 
+                        id="sortColumn"
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-800 dark:text-white"
+                    >
+                        <option value="">เลือกคอลัมน์</option>
+                    </select>
+                </div>
+                
+                <!-- Sort Order -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        ลำดับการเรียง
+                    </label>
+                    <select 
+                        id="sortOrder"
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-800 dark:text-white"
+                    >
+                        <option value="asc">📈 น้อยไปมาก (A-Z)</option>
+                        <option value="desc">📉 มากไปน้อย (Z-A)</option>
+                    </select>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex gap-2 pt-6">
+                    <button 
+                        id="searchBtn"
+                        class="btn-primary flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+                    >
+                        🔎 ค้นหา
+                    </button>
+                    <button 
+                        id="clearBtn"
+                        class="btn-primary flex-1 bg-gray-400 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg transition"
+                    >
+                        🔄 ล้าง
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Data Table Section -->
+        <div class="bg-white dark:bg-gray-900 rounded-lg shadow-md overflow-hidden">
+            <div id="tableContainer" class="table-container">
+                <!-- Empty State -->
+                <div id="emptyState" class="empty-state">
+                    <div class="empty-icon">📋</div>
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">ไม่มีข้อมูล</h3>
+                    <p class="text-gray-600 dark:text-gray-400">อัปโหลดไฟล์ Excel เพื่อเริ่มต้น</p>
+                </div>
+                
+                <!-- Data Table (ซ่อนไว้จนกว่าจะมีข้อมูล) -->
+                <table id="dataTable" class="data-table hidden">
+                    <thead></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="mt-8 text-center text-gray-600 dark:text-gray-400 text-sm">
+            <p>© 2568 โรงเรียนบ้านหนองแสง | ระบบจัดการข้อมูลนักเรียน DMC</p>
+        </div>
+    </div>
+    
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+    
+    <script>
+        // ===== ตัวแปรสถานะทั่วโลก =====
+        let allData = []; // เก็บข้อมูลทั้งหมดจากไฟล์ Excel
+        let filteredData = []; // เก็บข้อมูลที่ผ่านการกรองแล้ว
+        let currentColumns = []; // เก็บชื่อคอลัมน์
+        
+        // ===== Dark Mode Toggle =====
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        
+        darkModeToggle.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('darkMode', isDark);
+            themeIcon.textContent = isDark ? '☀️' : '🌙';
+        });
+        
+        // ===== Toast Notification Function =====
+        /**
+         * แสดงการแจ้งเตือน Toast
+         * @param {string} message - ข้อความที่จะแสดง
+         * @param {string} type - ประเภท: 'success' หรือ 'error'
+         */
+        function showToast(message, type = 'success') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            
+            toastContainer.appendChild(toast);
+            
+            // ล้าง Toast หลังจาก 3 วินาที
+            setTimeout(() => {
+                toast.classList.add('hide');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        // ===== อัปโหลดไฟล์ Excel =====
+        const uploadBtn = document.getElementById('uploadBtn');
+        const excelFile = document.getElementById('excelFile');
+        
+        uploadBtn.addEventListener('click', () => {
+            if (!excelFile.files.length) {
+                showToast('⚠️ กรุณาเลือกไฟล์ Excel ก่อน', 'error');
+                return;
+            }
+            
+            const file = excelFile.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                try {
+                    // อ่านไฟล์ Excel โดยใช้ SheetJS
+                    const data = e.target.result;
+                    const workbook = XLSX.read(data, { type: 'binary' });
+                    
+                    // ดึงข้อมูลจาก Sheet1
+                    const worksheet = workbook.Sheets['Sheet1'];
+                    if (!worksheet) {
+                        showToast('❌ ไม่พบ Sheet1 ในไฟล์', 'error');
+                        return;
+                    }
+                    
+                    // แปลงข้อมูลเป็น JSON
+                    allData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    if (allData.length === 0) {
+                        showToast('⚠️ ไฟล์ไม่มีข้อมูล', 'error');
+                        return;
+                    }
+                    
+                    // บันทึกชื่อคอลัมน์
+                    currentColumns = Object.keys(allData[0]);
+                    
+                    // อัปเดต UI
+                    updateTable(allData);
+                    updateSortOptions();
+                    document.getElementById('recordCount').textContent = `${allData.length} รายการ`;
+                    
+                    showToast(`✅ อัปโหลดสำเร็จ! โหลด ${allData.length} รายการ`, 'success');
+                    
+                } catch (error) {
+                    console.error(error);
+                    showToast('❌ เกิดข้อผิดพลาดในการอ่านไฟล์', 'error');
+                }
+            };
+            
+            reader.readAsBinaryString(file);
+        });
+        
+        // ===== อัปเดตตารางข้อมูล =====
+        /**
+         * อัปเดตตารางแสดงข้อมูล
+         * @param {Array} dataToDisplay - ข้อมูลที่จะแสดง
+         */
+        function updateTable(dataToDisplay) {
+            const table = document.getElementById('dataTable');
+            const emptyState = document.getElementById('emptyState');
+            const thead = table.querySelector('thead');
+            const tbody = table.querySelector('tbody');
+            
+            // ล้างตาราเดิม
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+            
+            if (dataToDisplay.length === 0) {
+                table.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            
+            // สร้าง header ตาราจากชื่อคอลัมน์
+            const headerRow = document.createElement('tr');
+            currentColumns.forEach(col => {
+                const th = document.createElement('th');
+                th.textContent = col;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            
+            // เติมข้อมูลลงตาราแต่ละแถว
+            dataToDisplay.forEach(row => {
+                const tr = document.createElement('tr');
+                currentColumns.forEach(col => {
+                    const td = document.createElement('td');
+                    td.textContent = row[col] || '-';
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            
+            // แสดงตาราและซ่อน empty state
+            table.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+        }
+        
+        // ===== อัปเดต Sort Options =====
+        /**
+         * อัปเดตตัวเลือกคอลัมน์สำหรับการเรียงลำดับ
+         */
+        function updateSortOptions() {
+            const sortColumn = document.getElementById('sortColumn');
+            sortColumn.innerHTML = '<option value="">เลือกคอลัมน์</option>';
+            
+            currentColumns.forEach(col => {
+                const option = document.createElement('option');
+                option.value = col;
+                option.textContent = col;
+                sortColumn.appendChild(option);
+            });
+        }
+        
+        // ===== ค้นหาและจัดรูปแบบข้อมูล =====
+        const searchBtn = document.getElementById('searchBtn');
+        const searchInput = document.getElementById('searchInput');
+        const sortColumn = document.getElementById('sortColumn');
+        const sortOrder = document.getElementById('sortOrder');
+        const clearBtn = document.getElementById('clearBtn');
+        
+        /**
+         * ค้นหาข้อมูลตามเงื่อนไข
+         */
+        function performSearch() {
+            const searchTerm = searchInput.value.toLowerCase();
+            
+            // กรองข้อมูลตามคำค้นหา
+            filteredData = allData.filter(row => {
+                return currentColumns.some(col => {
+                    const cellValue = (row[col] || '').toString().toLowerCase();
+                    return cellValue.includes(searchTerm);
+                });
+            });
+            
+            // เรียงลำดับข้อมูล
+            const column = sortColumn.value;
+            const order = sortOrder.value;
+            
+            if (column) {
+                filteredData.sort((a, b) => {
+                    let aVal = a[column] || '';
+                    let bVal = b[column] || '';
+                    
+                    // ลองแปลงเป็นตัวเลขถ้าเป็นไปได้
+                    if (!isNaN(aVal) && !isNaN(bVal)) {
+                        aVal = parseFloat(aVal);
+                        bVal = parseFloat(bVal);
+                    } else {
+                        aVal = aVal.toString().toLowerCase();
+                        bVal = bVal.toString().toLowerCase();
+                    }
+                    
+                    if (order === 'asc') {
+                        return aVal > bVal ? 1 : -1;
+                    } else {
+                        return aVal < bVal ? 1 : -1;
+                    }
+                });
+            }
+            
+            // อัปเดตตารางและแสดงผลลัพธ์
+            updateTable(filteredData);
+            
+            if (filteredData.length > 0) {
+                showToast(`✅ พบ ${filteredData.length} รายการ`, 'success');
+            } else {
+                showToast('⚠️ ไม่พบข้อมูลที่ตรงกับการค้นหา', 'error');
+            }
+        }
+        
+        /**
+         * ล้างการค้นหาและแสดงข้อมูลทั้งหมด
+         */
+        function clearSearch() {
+            searchInput.value = '';
+            sortColumn.value = '';
+            sortOrder.value = 'asc';
+            updateTable(allData);
+            showToast('🔄 ล้างการค้นหาสำเร็จ', 'success');
+        }
+        
+        // Event listeners สำหรับค้นหาและจัดรูปแบบ
+        searchBtn.addEventListener('click', performSearch);
+        clearBtn.addEventListener('click', clearSearch);
+        
+        // ค้นหาแบบ real-time เมื่อพิมพ์
+        searchInput.addEventListener('keyup', () => {
+            if (searchInput.value === '') {
+                updateTable(allData);
+            }
+        });
+        
+        // ค้นหาเมื่อกด Enter
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+        
+        // เรียงลำดับเมื่อเปลี่ยนค่า
+        sortColumn.addEventListener('change', performSearch);
+        sortOrder.addEventListener('change', performSearch);
+        
+        // ===== ตั้งค่าเริ่มต้นของ Dark Mode Icon =====
+        const isDark = document.documentElement.classList.contains('dark');
+        themeIcon.textContent = isDark ? '☀️' : '🌙';
+    </script>
+</body>
+</html>
